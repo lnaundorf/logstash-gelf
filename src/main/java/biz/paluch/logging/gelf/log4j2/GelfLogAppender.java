@@ -3,10 +3,12 @@ package biz.paluch.logging.gelf.log4j2;
 import static biz.paluch.logging.gelf.LogMessageField.NamedLogField.*;
 import static org.apache.logging.log4j.core.layout.PatternLayout.newBuilder;
 
+import java.io.Serializable;
 import java.util.Collections;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.core.Filter;
+import org.apache.logging.log4j.core.Layout;
 import org.apache.logging.log4j.core.LogEvent;
 import org.apache.logging.log4j.core.appender.AbstractAppender;
 import org.apache.logging.log4j.core.appender.AppenderLoggingException;
@@ -183,12 +185,14 @@ public class GelfLogAppender extends AbstractAppender {
     };
 
     protected GelfSender gelfSender;
+    protected final Layout<? extends Serializable> layout;
     private final MdcGelfMessageAssembler gelfMessageAssembler;
     private final ErrorReporter errorReporter;
 
-    public GelfLogAppender(String name, Filter filter, MdcGelfMessageAssembler gelfMessageAssembler, boolean ignoreExceptions) {
+    public GelfLogAppender(String name, Filter filter, Layout<? extends Serializable> layout, MdcGelfMessageAssembler gelfMessageAssembler, boolean ignoreExceptions) {
 
         super(name, filter, null, ignoreExceptions);
+        this.layout = layout;
         this.gelfMessageAssembler = gelfMessageAssembler;
 
         if (ignoreExceptions) {
@@ -203,6 +207,7 @@ public class GelfLogAppender extends AbstractAppender {
             @PluginAttribute("name") String name, @PluginElement("Filter") Filter filter,
             @PluginElement("Field") final GelfLogField[] fields,
             @PluginElement("DynamicMdcFields") final GelfDynamicMdcLogFields[] dynamicFieldArray,
+            @PluginElement("Layout") final Layout<? extends Serializable> layout,
             @PluginAttribute("graylogHost") String graylogHost, @PluginAttribute("host") String host,
             @PluginAttribute("graylogPort") String graylogPort, @PluginAttribute("port") String port,
             @PluginAttribute("version") String version, @PluginAttribute("extractStackTrace") String extractStackTrace,
@@ -284,7 +289,7 @@ public class GelfLogAppender extends AbstractAppender {
 
         configureFields(mdcGelfMessageAssembler, fields, dynamicFieldArray);
 
-        return new GelfLogAppender(name, filter, mdcGelfMessageAssembler, ignoreExceptions);
+        return new GelfLogAppender(name, filter, layout, mdcGelfMessageAssembler, ignoreExceptions);
     }
 
     /**
@@ -350,7 +355,7 @@ public class GelfLogAppender extends AbstractAppender {
     }
 
     protected GelfMessage createGelfMessage(final LogEvent logEvent) {
-        return gelfMessageAssembler.createGelfMessage(new Log4j2LogEvent(logEvent));
+        return gelfMessageAssembler.createGelfMessage(new Log4j2LogEvent(logEvent, layout));
     }
 
     public void reportError(String message, Exception exception) {

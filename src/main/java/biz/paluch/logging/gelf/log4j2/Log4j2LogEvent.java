@@ -1,10 +1,13 @@
 package biz.paluch.logging.gelf.log4j2;
 
+import java.io.Serializable;
+import java.nio.charset.Charset;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 
 import org.apache.logging.log4j.Level;
+import org.apache.logging.log4j.core.Layout;
 
 import biz.paluch.logging.gelf.DynamicMdcMessageField;
 import biz.paluch.logging.gelf.GelfUtil;
@@ -21,14 +24,23 @@ import biz.paluch.logging.gelf.intern.GelfMessage;
 class Log4j2LogEvent implements LogEvent {
 
     private org.apache.logging.log4j.core.LogEvent logEvent;
+    private Layout<? extends Serializable> layout;
+    
+    private static final Charset UTF8_CHARSET = Charset.forName("UTF-8");
 
-    public Log4j2LogEvent(org.apache.logging.log4j.core.LogEvent logEvent) {
+    public Log4j2LogEvent(org.apache.logging.log4j.core.LogEvent logEvent, Layout<? extends Serializable> layout) {
         this.logEvent = logEvent;
+        this.layout = layout;
     }
 
     @Override
     public String getMessage() {
-        return logEvent.getMessage().getFormattedMessage();
+    	if (layout != null) {
+    		byte[] b = layout.toByteArray(logEvent);
+    		return new String(b, UTF8_CHARSET);
+    	} else {
+    		return logEvent.getMessage().getFormattedMessage();
+    	}
     }
 
     @Override
